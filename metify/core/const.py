@@ -1,24 +1,18 @@
 """
-**constant.py**
+**dc_plus.common.const**
 
 Contains commonly used constants, error messages, and string literals for the ModelBase
 framework to maintain consistency and avoid magic strings throughout the codebase.
 
 """
-
 from typing import Final
 
 
-SERIALIZE_METHOD: Final[str] = "__serialize__"
-DESERIALIZE_METHOD: Final[str] = "__deserialize__"
 
-DESCRIPTION_KEY: Final[str] = "desc"
-VALIDATOR_KEY: Final[str] = "validator"
-
-OPTIONS_ATTR: Final[str] = "__options__"
-CUSTOM_FLAGS_ATTR: Final[str] = "__custom_flags__"
-FIELD_ALIASES_ATTR: Final[str] = "__field_aliases__"
-REVERSE_ALIASES_ATTR: Final[str] = "__reverse_aliases__"
+FIELDS_CLS_VAR = '__mtf_fields__'
+ALIAS_MAP_CLS_VAR = '__mtf_alias_map__'
+EXTRAS_CLS_VAR = '__mtf_extras__'
+CONFIG_CLS_VAR_NAME = '__mtf_config__'
 
 ORIGIN_ATTR: Final[str] = "__origin__"
 ARGS_ATTR: Final[str] = "__args__"

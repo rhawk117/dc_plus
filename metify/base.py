@@ -1,5 +1,5 @@
 """
-**model_base.py**
+**base.py**
 
 Provides class definition for `ModelBase`, a base class for creating data models and
 the `_ModelMeta` metaclass for handling class metadata and typing. Private Utility functions
@@ -8,15 +8,22 @@ of class definition to avoid expensive refactors.
 
 """
 
-from typing import Any, ClassVar, Self, TypeVar, dataclass_transform, get_type_hints
-
-
-from collections.abc import Callable, Generator
 import dataclasses
 import json
+from typing import (
+    Any,
+    ClassVar,
+    Self,
+    TypeVar,
+    dataclass_transform,
+    get_type_hints
+)
 
-from .metadata import ModelOptions, meta
-from . import constant as const
+from pydantic import Field
+from collections.abc import Callable, Generator
+
+from .metadata import Meta, ModelOptions
+from .core import const
 
 
 T = TypeVar("T", bound="ModelBase")
@@ -89,7 +96,7 @@ def _get_list_item_type(list_type: type) -> type | None:
 
 
 @dataclass_transform(
-    field_specifiers=(meta,),
+    field_specifiers=(Meta,),
     kw_only_default=True
 )
 class _ModelMeta(type):
@@ -304,7 +311,10 @@ def _serialize_value(value: Any, *, dump_by_alias: bool = False) -> Any:
         The serialized value
     """
     if isinstance(value, ModelBase):
-        return value.dump(dump_by_alias=dump_by_alias)
+        return value.dump(
+            dump_by_alias=dump_by_alias,
+            exclude_none=value.options.exclude_none # propogate options, to follow the callers behavior, not models
+        )
 
     if isinstance(value, (list, tuple)):
         return [
@@ -397,12 +407,12 @@ def _deserialize_list(value: list, list_type: type) -> list:
     return [_deserialize_value(item, item_type) for item in value]
 
 
-def _asdict_iterator(
+def asdict_iterator(
     model: "ModelBase",
     *,
     exclude_attrs: set[str] | None = None,
-    exclude_none: bool = False,    dump_by_alias: bool = False,
-    dict_factory: Callable[[list[tuple[str, Any]]], dict[str, Any]] = dict,
+    exclude_none: bool = False,
+    dump_by_alias: bool = False,
 ) -> Generator[tuple[str, Any], None, None]:
     """Create a dictionary factory for the model.
 
@@ -434,14 +444,17 @@ def _asdict_iterator(
             const.ALIAS_GENERATOR_MISSING.format(flag_name="dump_by_alias")
         )
 
+    omit_none = exclude_none or model.options.exclude_none
     for field in dataclasses.fields(model):
-        if _should_exclude_field(field.name, exclude_attrs):
+        blacklisted = exclude_attrs is not None and field.name in exclude_attrs
+
+        if exclude_attrs and field.name in exclude_attrs:
             continue
 
-        value = getattr(model, field.name)
-
-        if _should_exclude_none_value(value, exclude_none):
+        value = getattr(model, field.name, None)
+        if not value and omit_none:
             continue
+
         serialized_value = _serialize_value(value, dump_by_alias=dump_by_alias)
         key = _get_serialization_key(field.name, model, dump_by_alias)
 
@@ -466,22 +479,6 @@ def _should_exclude_field(field_name: str, exclude_attrs: set[str] | None) -> bo
     return exclude_attrs is not None and field_name in exclude_attrs
 
 
-def _should_exclude_none_value(value: Any, exclude_none: bool) -> bool:
-    """Check if a None value should be excluded from serialization.
-
-    Parameters
-    ----------
-    value : Any
-        The field value
-    exclude_none : bool
-        Whether to exclude None values
-
-    Returns
-    -------
-    bool
-        True if the value should be excluded
-    """
-    return exclude_none and value is None
 
 def _get_serialization_key(
     field_name: str, model: "ModelBase", dump_by_alias: bool
@@ -587,7 +584,6 @@ def _deserialize_nested_models(
                 working_dict[field_name] = _deserialize_value(value, target_type)
 
     except (ImportError, AttributeError):
-        # Gracefully handle cases where type inspection fails
         pass
 
 
@@ -666,7 +662,6 @@ class ModelBase(metaclass=_ModelMeta):
         exclude_attrs: set[str] | None = None,
         exclude_none: bool = False,
         dump_by_alias: bool = False,
-        dict_factory: Callable[[list[tuple[str, Any]]], dict[str, Any]] = dict,
     ) -> dict[str, Any]:
         """Dump the model to a dictionary.
 
@@ -678,8 +673,6 @@ class ModelBase(metaclass=_ModelMeta):
             Whether to exclude attributes with None values, by default False
         dump_by_alias : bool, optional
             Whether to use field aliases as dictionary keys, by default False
-        dict_factory : Callable, optional
-            Factory function for creating the output dictionary, by default dict
 
         Returns
         -------
@@ -702,12 +695,11 @@ class ModelBase(metaclass=_ModelMeta):
         {'name': 'Alice', 'age': 30}
         """
         return dict(
-            _asdict_iterator(
+            asdict_iterator(
                 self,
                 exclude_attrs=exclude_attrs,
                 exclude_none=exclude_none,
                 dump_by_alias=dump_by_alias,
-                dict_factory=dict_factory,
             )
         )
 
@@ -905,7 +897,7 @@ class ModelBase(metaclass=_ModelMeta):
         >>> list(user.items(exclude_attrs={'email'}))
         [('name', 'Eve'), ('age', 28)]
         """
-        yield from _asdict_iterator(
+        yield from asdict_iterator(
             self,
             exclude_attrs=exclude_attrs,
             exclude_none=exclude_none,

@@ -8,20 +8,22 @@ descriptions, and custom configuration options for ModelBase classes.
 """
 from __future__ import annotations
 
+from ast import Call
 import dataclasses
-from typing import Any, TypeVar
+from typing import Any, TypeVar,
 from collections.abc import Callable, Mapping
-
+from pydantic import ConfigDict
 
 T = TypeVar("T")
 
 
-def meta(
+def Meta(
     *,
-    default: Any = dataclasses.MISSING,
-    default_factory: Callable[[], Any] | None = None,
+    default: T | None = None,
+    default_factory: Callable[[], T] | None,
     desc: str | None = None,
-    metadata: Mapping[str, Any] | None = None,
+    extra: Mapping[str, Any] | None = None,
+    serializer_func: Callable[[T], Any] | None = None,
     **dataclass_kwargs: Any
 ) -> dataclasses.Field:
     """A wrapper around `dataclasses.field` that allows you to add
@@ -62,18 +64,18 @@ def meta(
     Basic field with description:
 
     >>> class Product(ModelBase):
-    ...     name: str = meta(desc="Product name as displayed to customers")
-    ...     price: float = meta(desc="Price in USD, must be positive")
-    ...     category: str = meta(default="general", desc="Product category for organization")
+    ...     name: str = Meta(desc="Product name as displayed to customers")
+    ...     price: float = Meta(desc="Price in USD, must be positive")
+    ...     category: str = Meta(default="general", desc="Product category for organization")
 
     Field with default factory for mutable types:
 
     >>> class ShoppingCart(ModelBase):
-    ...     items: list[str] = meta(
+    ...     items: list[str] = Meta(
     ...         default_factory=list,
     ...         desc="List of product IDs in the cart"
     ...     )
-    ...     metadata: dict[str, Any] = meta(
+    ...     metadata: dict[str, Any] = Meta(
     ...         default_factory=dict,
     ...         desc="Additional cart metadata"
     ...     )
@@ -81,11 +83,11 @@ def meta(
     Field with custom metadata:
 
     >>> class DatabaseModel(ModelBase):
-    ...     id: int = meta(
+    ...     id: int = Meta(
     ...         desc="Primary key identifier",
     ...         metadata={"db_column": "id", "db_type": "INTEGER PRIMARY KEY"}
     ...     )
-    ...     created_at: str = meta(
+    ...     created_at: str = Meta(
     ...         desc="Creation timestamp in ISO format",
     ...         metadata={"db_column": "created_at", "db_type": "TIMESTAMP"}
     ...     )
@@ -93,12 +95,12 @@ def meta(
     Field with dataclass-specific options:
 
     >>> class InternalModel(ModelBase):
-    ...     public_field: str = meta(desc="This field appears in repr")
-    ...     private_field: str = meta(
+    ...     public_field: str = Meta(desc="This field appears in repr")
+    ...     private_field: str = Meta(
     ...         desc="This field is hidden from repr",
     ...         repr=False
     ...     )
-    ...     computed_field: str = meta(
+    ...     computed_field: str = Meta(
     ...         desc="This field is not included in initialization",
     ...         init=False,
     ...         default="computed_value"
@@ -115,6 +117,7 @@ def meta(
         metadata=enhanced_metadata,
         **dataclass_kwargs
     )
+
 
 
 @dataclasses.dataclass(slots=True, frozen=True)
@@ -252,7 +255,7 @@ class ModelOptions:
     ...     record_id: int
     ...     created_by: str
     ...     last_modified: str | None = None
-    ...     metadata: dict[str, Any] = meta(default_factory=dict)
+    ...     metadata: dict[str, Any] = Meta(default_factory=dict)
     """
 
     frozen: bool | None = None
