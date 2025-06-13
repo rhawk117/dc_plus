@@ -116,7 +116,11 @@ class _ModelMeta(type):
     __reverse_aliases__: ClassVar[dict[str, str]]
 
     def __new__(
-        mcls, name: str, bases: tuple[type, ...], ns: dict[str, Any], **kwargs: Any
+        mcls,
+        name: str,
+        bases: tuple[type, ...],
+        ns: dict[str, Any],
+        **kwargs: Any
     ) -> type["_ModelMeta"]:
         """Create a new ModelBase class with proper configuration.
 
