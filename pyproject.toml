@@ -1,13 +1,61 @@
+[build-system]
+requires      = [
+  "setuptools>=69",
+  "wheel>=0.40.0",
+  "cython>=3.1.2",
+  "mypy[mypyc]>=1.16.0"
+]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "dc-plus"
-version = "0.1.0"
-description = "A package that extends the functionality of dataclasses "
-readme = "README.md"
+name            = "metify"
+version         = "0.1.0"
+description     = "High-performance dataclass-style models with Cython + mypyc."
+readme          = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+keywords        = ["dataclasses", "pydantic", "serialization", "validation", "performance"]
+classifiers     = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Cython",
+  "Typing :: Typed",
+]
+
+[project.urls]
+repository = "https://github.com/rhawk117/metify"
+
+[project.optional-dependencies]
+orjson    = ["orjson>=3.10.18"]
+msgspec   = ["msgspec>=0.19.0"]
+rapidjson = ["python-rapidjson>=1.20"]
+ujson     = ["ujson>=5.10.0"]
+all       = [
+  "orjson>=3.10.18",
+  "msgspec>=0.19.0",
+  "python-rapidjson>=1.20",
+  "ujson>=5.10.0",
+]
 
 [dependency-groups]
 dev = [
-    "pytest>=8.4.0",
-    "ruff>=0.11.13",
+  "pytest>=8.4.0",
+  "pytest-benchmark>=5.1.0",
+  "pytest-cov>=6.2.1",
+  "ruff>=0.4.4",
 ]
+
+[tool.setuptools]
+packages = ["metify"]
+zip-safe = false
+
+[tool.setuptools.package-data]
+metify = ["py.typed", "*.pyx"]
+
+[tool.mypy]
+python_version = "3.12"
+strict         = true
+
+[[tool.mypy.overrides]]
+module                 = "metify._speedups"
+ignore_missing_imports = true

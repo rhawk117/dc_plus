@@ -1,10 +1,11 @@
-from __future__ import annotations
+"""Internal meta information class for field definitions."""
 
-import dataclasses
+from __future__ import annotations
 import typing
 
 if typing.TYPE_CHECKING:
     from .types import FactoryFn, ValidatorFn, SerializerFn
+
 
 REQUIRED = ...
 _MISSING = object()
@@ -16,7 +17,9 @@ class FieldFlags(typing.TypedDict, total=False):
     repr: bool
 
 
-class _MetaInfo:
+class MetaField:
+    """Internal class for storing field metadata and configuration."""
+
     MISSING = _MISSING
     REQUIRED = REQUIRED
 
@@ -38,7 +41,7 @@ class _MetaInfo:
         self,
         *,
         default: typing.Any = _MISSING,
-        default_factory:  FactoryFn | typing.Any = _MISSING,
+        default_factory: FactoryFn | typing.Any = _MISSING,
         desc: str | None = None,
         alias: str | None = None,
         validator: ValidatorFn | None = None,
@@ -68,16 +71,30 @@ class _MetaInfo:
         )
 
     def has_default(self) -> bool:
+        '''Check if this field has a default value or factory.
+
+        Returns
+        -------
+        bool
+            _whether a default exists_
+        '''
         return self.default is not _MISSING or self.default_factory is not _MISSING
 
     def produce(self) -> typing.Any:
+        '''gets the default value or calls factory function.
+
+        Returns
+        -------
+        typing.Any
+            _the type of the field_
+        '''
         if self.default_factory is not _MISSING:
             return self.default_factory()
         return self.default
 
     def __repr__(self) -> str:
         return (
-            f'_MetaInfo(name={self.name!r}, type={self.type!r}, '
+            f'_MetaField(name={self.name!r}, type={self.type!r}, '
             f'default={self.default!r}, default_factory={self.default_factory!r}, '
             f'alias={self.alias!r}, desc={self.desc!r}, flags={self.flags!r})'
         )
